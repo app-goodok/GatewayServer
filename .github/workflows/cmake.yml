@@ -13,6 +13,17 @@ env:
   BUILD_TYPE_RELEASE: Release
 
 jobs:
+  login:
+    runs-on: ubuntu-latest
+    container:
+      image: docker.pkg.github.com/app-goodok/gatewayserver/common-env:0.1.1
+    steps:
+      - name: Login to GitHub Packages Docker Registry
+        uses: docker/login-action@v1
+        with:
+          registry: docker.pkg.github.com
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
   build_debug:
     runs-on: ubuntu-latest
     container:
