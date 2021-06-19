@@ -16,7 +16,7 @@ jobs:
   login:
     runs-on: ubuntu-latest
     container:
-      image: docker.pkg.github.com/app-goodok/gatewayserver/common-env:0.1.1
+      image: ghcr.io/app-goodok/gatewayserver/common-env:0.1.1
     steps:
       - name: Login to GitHub Packages Docker Registry
         uses: docker/login-action@v1
@@ -58,7 +58,7 @@ jobs:
   build_release:
     runs-on: ubuntu-latest
     container:
-      image: docker.pkg.github.com/app-goodok/gatewayserver/common-env:0.1.1
+      image: ghcr.io/app-goodok/gatewayserver/common-env:0.1.1
 
     steps:
       - uses: actions/checkout@v2
