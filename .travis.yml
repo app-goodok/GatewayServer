@@ -48,7 +48,7 @@ matrix:
         - git tag 0.1.$TRAVIS_BUILD_NUMBER-Linux
       deploy:
         - provider: releases
-          api_key: $DEKSTOP_TOKEN
+          api_key: $GITHUB_TOKEN
           file: goodok-servers-0.1.1-Linux.deb
           skip_cleanup: true
           on:

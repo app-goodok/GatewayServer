@@ -1,4 +1,4 @@
-FROM kstmorozov/gateway_server:latest
+FROM ghcr.io/app-goodok/gatewayserver/common-env:0.1.1
 MAINTAINER Konstantin Morozov <morozov-kst@yandex.ru>
 ENV DEBIAN_FRONTEND=noninteractive
 

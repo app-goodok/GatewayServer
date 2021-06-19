@@ -5,5 +5,5 @@
 Для запуска:
 
 ````
-docker run -t --network=host -p 7777:7777  kstmorozov/goodok-gateway-server
+docker run -t --network=host -p 7777:7777  docker.pkg.github.com/app-goodok/gatewayserver/gateway-server:0.1.1
 ````
