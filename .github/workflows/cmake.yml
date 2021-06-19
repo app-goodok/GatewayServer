@@ -16,7 +16,7 @@ jobs:
   build_debug:
     runs-on: ubuntu-latest
     container:
-      image: kstmorozov/gateway_server:latest
+      image: docker.pkg.github.com/app-goodok/gatewayserver/common-env:0.1.1
 
     steps:
       - uses: actions/checkout@v2
@@ -47,7 +47,7 @@ jobs:
   build_release:
     runs-on: ubuntu-latest
     container:
-      image: kstmorozov/gateway_server:latest
+      image: docker.pkg.github.com/app-goodok/gatewayserver/common-env:0.1.1
 
     steps:
       - uses: actions/checkout@v2
