@@ -27,7 +27,7 @@ namespace goodok::db {
     public:
         ~Storage() override = default;
 
-        bool connect(ConnectSettings const& settings) override;
+        bool connect(ParamsDb const& settings) override;
 
         type_id_user checkRegUser(InputSettings const&) override;
 

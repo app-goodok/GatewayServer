@@ -10,14 +10,14 @@
 
 namespace goodok::db {
 
-    bool WrapperPg::connect(ConnectSettings const& setting)
+    bool WrapperPg::connect(ParamsDb const& setting)
     {
         if (!isConnected) {
             connection = PQconnectdb(
-                    std::string("user=" + setting.user
+                    std::string("user=" + setting.username
                                 + " password=" + setting.password
                                 + " host=" + setting.host
-                                + " dbname=" + setting.db
+                                + " dbname=" + setting.name
                     ).c_str()
                     );
         }
@@ -26,6 +26,25 @@ namespace goodok::db {
             PQerrorMessage(connection);
         } else {
             isConnected = true;
+            std::string query;
+            PGresult *  result;
+
+            query = "CREATE TABLE IF NOT EXISTS clients(client_id serial primary key, login varchar(32), password varchar(32));";
+            result = execThreadSafe(query);
+            // @TODO check error
+            PQclear(result);
+
+            query = "CREATE TABLE IF NOT EXISTS channels(channel_id serial primary key, channel_name varchar(32));";
+            result = execThreadSafe(query);
+            PQclear(result);
+
+            query = "CREATE TABLE IF NOT EXISTS subscriptions(client_id integer references clients(client_id), channel_id integer references channels(channel_id));";
+            result = execThreadSafe(query);
+            PQclear(result);
+
+            query = "CREATE TABLE IF NOT EXISTS history(client_id integer references clients(client_id), channel_id integer references channels(channel_id), datetime timestamp, message varchar(255));";
+            result = execThreadSafe(query);
+            PQclear(result);
         }
 
         return isConnected;
@@ -34,7 +53,7 @@ namespace goodok::db {
     PGresult * WrapperPg::execThreadSafe(std::string const& query) const
     {
         std::lock_guard g(mutex_);
-        PGresult *res = PQexec(connection, query.c_str());;
+        PGresult *res = PQexec(connection, query.c_str());
         return res;
     }
 
@@ -42,7 +61,7 @@ namespace goodok::db {
     {
         type_id_user client_id = REG_LOGIN_IS_BUSY;
         if (isConnected) {
-            const std::string query = "SELECT id FROM clients WHERE login='" + client_name + "';";
+            const std::string query = "SELECT client_id FROM clients WHERE login='" + client_name + "';";
             PGresult *res = execThreadSafe(query);
             if (PQresultStatus(res) != PGRES_TUPLES_OK) {
                 log::write(log::Level::error, "WrapperPg", boost::format("getClientId: %1%") % PQresultErrorMessage(res));
@@ -63,7 +82,7 @@ namespace goodok::db {
             return channel_id;
         }
 
-        const std::string query = "SELECT DISTINCT id FROM channels WHERE channel_name='" + channel_name + "';";
+        const std::string query = "SELECT DISTINCT channel_id FROM channels WHERE channel_name='" + channel_name + "';";
         PGresult *res = execThreadSafe(query);
         if (PQresultStatus(res) == PGRES_TUPLES_OK) {
             if (PQntuples(res)) {
@@ -84,7 +103,7 @@ namespace goodok::db {
     {
         std::string channel_name;
         if (isConnected) {
-            const std::string query = "SELECT channel_name FROM channels WHERE id='" + std::to_string(channel_id) + "';";
+            const std::string query = "SELECT channel_name FROM channels WHERE channel_id='" + std::to_string(channel_id) + "';";
             PGresult *res = execThreadSafe(query);
             if (PQresultStatus(res) != PGRES_TUPLES_OK) {
                 log::write(log::Level::error, "WrapperPg", boost::format("getChannelName: %1%") % PQresultErrorMessage(res));
@@ -106,7 +125,7 @@ namespace goodok::db {
             return client_name;
         }
 
-        const std::string query = "SELECT login FROM clients WHERE id='" + std::to_string(client_id) + "';";
+        const std::string query = "SELECT login FROM clients WHERE client_id='" + std::to_string(client_id) + "';";
         PGresult *res = execThreadSafe(query);
         if (PQresultStatus(res) != PGRES_TUPLES_OK) {
             log::write(log::Level::error, "WrapperPg", boost::format("getClientName: %1%") % PQresultErrorMessage(res));
@@ -160,7 +179,7 @@ namespace goodok::db {
             return client_id;
         }
 
-        const std::string query = "SELECT id, password FROM clients WHERE login='" + settings.clientName + "';";
+        const std::string query = "SELECT client_id, password FROM clients WHERE login='" + settings.clientName + "';";
         PGresult *res = execThreadSafe(query);
         if (PQresultStatus(res) != PGRES_TUPLES_OK) {
             log::write(log::Level::error, "WrapperPg",
@@ -191,12 +210,14 @@ namespace goodok::db {
             log::write(log::Level::warning, "WrapperPg", "no connect to db");
             return channels;
         }
-        const std::string query = "SELECT DISTINCT channel_name FROM history WHERE client_id=" + std::to_string(client_id) + ";";
+        const std::string query = "SELECT DISTINCT channel_id FROM history WHERE client_id=" + std::to_string(client_id) + ";";
         PGresult *res = execThreadSafe(query);
         if (PQresultStatus(res) == PGRES_TUPLES_OK) {
             for(int i=0; i < PQntuples(res); ++i) {
-                log::write(log::Level::debug, "WrapperPg", boost::format("channel: channel_name=%1%") % PQgetvalue(res, i, 0));
-                channels.emplace_back(PQgetvalue(res, i, 0));
+                std::string channel_id = PQgetvalue(res, i, 0);
+                auto channel_name = getChannelName(std::stoi(channel_id));
+                log::write(log::Level::debug, "WrapperPg", boost::format("channel: channel_name=%1%") % channel_name);
+                channels.emplace_back(channel_name);
             }
         } else {
             log::write(log::Level::error, "WrapperPg", boost::format("getUserNameChannels: %1%") % PQresultErrorMessage(res));
@@ -218,7 +239,8 @@ namespace goodok::db {
         if (PQresultStatus(res) == PGRES_TUPLES_OK) {
             log::write(log::Level::debug, "WrapperPg", boost::format("channel_id=%1% has users") % channel_id);
             for(int i=0; i < PQntuples(res); ++i) {
-                log::write(log::Level::debug, "WrapperPg", boost::format("user has channel: %1%") % PQgetvalue(res, i, 0));
+                log::write(log::Level::debug, "WrapperPg", boost::format("client_id=%1% has channel_id=%2%")
+                    % PQgetvalue(res, i, 0) % channel_id);
                 users.emplace_back(std::stoi(PQgetvalue(res, i, 0)));
             }
         } else {
@@ -337,10 +359,12 @@ namespace goodok::db {
            << std::setfill('0') << std::setw(2) << message.dt.time.minutes << ":"
            << std::setfill('0') << std::setw(2) << message.dt.time.seconds;
 
+        auto channel_id = getChannelId(message.channel_name);
+
         const std::string query =
-                "insert into history(client_id, channel_name, datetime, message) "
+                "INSERT INTO history(client_id, channel_id, datetime, message) "
                 "values (" + std::to_string(getClientId(message.author)) + ", '"
-                + message.channel_name + "', '"
+                + std::to_string(channel_id) + "', '"
                 + ss.str() + "', '"
                 + message.text + "');";
         res = PQexec(connection, query.c_str());
@@ -362,7 +386,7 @@ namespace goodok::db {
         }
 
         const std::string channel_name = getChannelName(channel_id);
-        const std::string query = "SELECT * FROM history WHERE channel_name='" + channel_name + "';";
+        const std::string query = "SELECT * FROM history WHERE channel_id='" + std::to_string(channel_id) + "';";
         PGresult *res = execThreadSafe(query);
         if (PQresultStatus(res) == PGRES_TUPLES_OK) {
             for (int i = 0; i < PQntuples(res); i++) {

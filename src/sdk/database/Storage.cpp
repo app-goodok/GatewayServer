@@ -7,7 +7,7 @@
 
 namespace goodok::db {
 
-    bool Storage::connect(ConnectSettings const&) {
+    bool Storage::connect(ParamsDb const&) {
         log::write(log::Level::info, "Storage",
                    "without network connect");
         return true;

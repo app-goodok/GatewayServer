@@ -8,9 +8,9 @@
 
 namespace goodok {
 
-    Channel::Channel(std::weak_ptr<UserManager> manager, std::weak_ptr<db::IDatabase> db, std::string const& name, std::size_t id) :
+    Channel::Channel(std::weak_ptr<UserManager> manager, std::weak_ptr<db::IDatabase> database, std::string const& name, std::size_t id) :
         manager_(std::move(manager)),
-        db_(std::move(db)),
+        db_(std::move(database)),
         name_(name),
         id_(id)
     {
@@ -101,7 +101,7 @@ namespace goodok {
                 session->write(std::move(buffer));
             } else {
                 log::write(log::Level::error, boost::format("Channel=%1%") % name_,
-                           "have not got a new messages");
+                           boost::format("have not got a new messages for client_id=") % client_id);
             }
         } else {
             log::write(log::Level::warning, boost::format("Channel=%1%") % name_,
@@ -117,17 +117,21 @@ namespace goodok {
             return;
         }
 
-        auto buffer = MsgFactory::serialize<command::TypeCommand::EchoResponse>(message);
+        const auto buffer = MsgFactory::serialize<command::TypeCommand::EchoResponse>(message);
 
         for(auto const& id : idUsers_) {
             auto user = manager->getUser(id);
             if (!user) {
                 continue;
             }
-            log::write(log::Level::error, boost::format("Channel=%1%") % name_,
-                       boost::format("send msg=%1% to user=%2%") % message.text % user->getName());
             if (auto session = user->getSession().lock()) {
-                session->write(std::move(buffer));
+                log::write(log::Level::info, boost::format("Channel=%1%") % name_,
+                           boost::format("send msg=%1% to user=%2%") % message.text % user->getName());
+                auto temp = buffer;
+                session->write(std::move(temp));
+            } else {
+                log::write(log::Level::error, boost::format("Channel=%1%") % name_,
+                           boost::format("failed send msg=%1% to user=%2%. session dead.") % message.text % user->getName());
             }
         }
         if (auto db = db_.lock()) {

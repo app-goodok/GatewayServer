@@ -21,13 +21,23 @@ file(GLOB FILES_SRC
 
 add_library(${APP_NAME} STATIC ${FILES_SRC})
 
-set_target_properties(${APP_NAME} PROPERTIES
-        CXX_STANDARD 20
-        CXX_STANDARD_REQUIRED ON
-        LINK_LIBRARIES pthread
-        COMPILE_OPTIONS "-std=c++2a;-O2;-Wall;-Wextra;-Wpedantic;-fsanitize=thread"
-        LINK_OPTIONS "-fsanitize=thread"
-        )
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set_target_properties(${APP_NAME} PROPERTIES
+            CXX_STANDARD 20
+            CXX_STANDARD_REQUIRED ON
+            LINK_LIBRARIES pthread
+            COMPILE_OPTIONS "-std=c++2a;-O2;-Wall;-Wextra;-Wpedantic;-fsanitize=thread"
+            LINK_OPTIONS "-fsanitize=thread"
+            )
+
+else()
+    set_target_properties(${APP_NAME} PROPERTIES
+            CXX_STANDARD 20
+            CXX_STANDARD_REQUIRED ON
+            LINK_LIBRARIES pthread
+            COMPILE_OPTIONS "-std=c++2a;-O2;-Wall;-Wextra;-Wpedantic"
+            )
+endif()
 
 target_include_directories(${APP_NAME}
         PUBLIC

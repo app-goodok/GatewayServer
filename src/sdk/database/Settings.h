@@ -8,11 +8,11 @@
 #include <string>
 
 namespace goodok::db {
-    struct ConnectSettings {
-        std::string user = "postgres";
-        std::string password = "123";
-        std::string host = "127.0.0.1";
-        std::string db = "chat";
+    struct ParamsDb {
+        std::string username;
+        std::string password;
+        std::string host; // @TODO to uint32_t
+        std::string name;   // db name
     };
 
     struct InputSettings {

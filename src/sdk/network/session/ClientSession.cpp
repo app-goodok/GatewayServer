@@ -32,7 +32,11 @@ namespace goodok {
             if (auto socket = socketWeak_.lock()) {
                 std::unique_lock<std::mutex> locker(mutexSocket_);
 
-                auto handler = [locker_ {std::move(locker)} ](boost::system::error_code ec, std::size_t bytes) mutable {
+                auto handler = [locker_ = std::move(locker) ](boost::system::error_code ec, std::size_t bytes) mutable {
+                    // @TODO warning from thread-sanitizer - unlock.
+                    if (bytes == 0) {
+                        log::write(log::Level::error, "SocketWriter", "send 0 bytes");
+                    }
                     locker_.unlock();
 
                     if (ec.failed()) {

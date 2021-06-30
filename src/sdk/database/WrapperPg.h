@@ -16,7 +16,7 @@ namespace goodok::db {
         WrapperPg() = default;
         ~WrapperPg() override = default;
 
-        bool connect(ConnectSettings const&) override;
+        bool connect(ParamsDb const&) override;
 
         type_id_user checkRegUser(InputSettings const&) override;
 

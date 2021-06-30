@@ -3,10 +3,11 @@
 //
 
 #include "Logger.h"
+#include <boost/log/sinks/text_file_backend.hpp>
 
+#include <boost/log/utility/setup/file.hpp>
 
-namespace goodok {
-namespace log {
+namespace goodok::log {
 
     namespace logging = boost::log;
     namespace sinks = boost::log::sinks;
@@ -19,10 +20,12 @@ namespace log {
     {
         logging::add_file_log
         (
-                keywords::file_name = "log%3N.txt",
+                keywords::file_name = "log_%3N.txt",
+                keywords::open_mode = std::ios_base::app,
                 keywords::rotation_size = 10 * 1024 * 1024,
                 keywords::time_based_rotation = sinks::file::rotation_at_time_point(0, 0, 0),
-                keywords::format = "%LineID%: [%TimeStamp%]<%Severity%>: %Message%"
+                keywords::format = "%LineID%: [%TimeStamp%]<%Severity%>: %Message%",
+                keywords::auto_flush = true
         );
         logging::add_console_log(std::cout, boost::log::keywords::format =
                 "%LineID%: [%TimeStamp%]<%Severity%>: %Message%"
@@ -75,5 +78,4 @@ namespace log {
         }
     }
 
-} // end namespace log
-} // end namespace goodok
+} // end namespace goodok::log
